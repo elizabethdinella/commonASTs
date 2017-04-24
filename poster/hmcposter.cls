@@ -58,10 +58,10 @@
 \InputIfFileExists{hmcposter.cfg}{}{}
 
 %% Set some dimensions for layout.
-\setlength{\paperwidth}{72in}
+\setlength{\paperwidth}{48in}
 \setlength{\paperheight}{36in}
-\setlength{\textwidth}{67.5in}
-\setlength{\textheight}{26.5in}
+\setlength{\textwidth}{45.0in}
+\setlength{\textheight}{31.0in}
 \setlength{\topmargin}{0.5in}
 \setlength{\oddsidemargin}{0.75in}
 \setlength{\headheight}{6in}
@@ -110,7 +110,8 @@
 \def\sponsorlogo#1{\gdef\@sponsorlogo{#1}}
 \def\@sponsorlogo{\@latex@warning@no@line{No \noexpand\sponsorlogo given}}
 
-\def\sponsorlogowidth#1{\gdef\@sponsorlogowidth{#1}}
+\def\sponsorlogo
+#1{\gdef\@sponsorlogowidth{#1}}
 \def\@sponsorlogowidth{2in}
 \fi
 
@@ -153,17 +154,17 @@
 
 %% Define a command to include the HMC Logo.
 \DeclareRobustCommand{\@hmclogo}{%
-  \begin{minipage}{9.5in}
-     \raisebox{2.0in}{\resizebox{14.5in}{!}{\includegraphics{lgplogo2cm}}}
+  \begin{minipage}{6.5in}
+     \raisebox{2.0in}{\resizebox{10.5in}{!}{\includegraphics{lgplogo2cm}}}
   \end{minipage}
 }
 
 %% Define a command to include the RPI Logo.
 \DeclareRobustCommand{\@rpilogo}{%
-  \begin{minipage}{17.0in}
-    \raisebox{2.0in}{\resizebox{4.2in}{!}{\includegraphics{logo_cs_design_1}}}
-    \hspace{1.0in}
-    \raisebox{1.7in}{\resizebox{12.0in}{!}{\includegraphics{submitty_logo}}}
+  \begin{minipage}{10.0in}
+    \raisebox{2.0in}{\resizebox{2.8in}{!}{\includegraphics{logo_cs_design_1}}}
+    \hspace{0.5in}
+    \raisebox{1.7in}{\resizebox{8.0in}{!}{\includegraphics{submitty_logo}}}
   \end{minipage}
 }
 
@@ -216,7 +217,7 @@
  %  \raisebox{3.5in}{
     \adjustbox{varwidth=30in,raise=6.5in}{
     \begin{center}
-    \color{dkblue}\fontsize{80pt}{100pt}\selectfont\textsf{\textbf{\@title}} \\
+    \color{dkblue}\fontsize{60pt}{80pt}\selectfont\textsf{\textbf{\@title}} \\
 \vspace{0.2in}
     \color{black}\fontsize{45pt}{50pt}\textsf{\@author}
     \end{center}
@@ -328,7 +329,7 @@
 \newenvironment{poster}{%
 \thispagestyle{fancy}
 %{\color{hmcgold}\rule{\textwidth}{2pt}}
-\begin{multicols*}{5}
+\begin{multicols*}{4}
 }%
 {\end{multicols*}
 }
@@ -350,3 +351,4 @@
 \renewcommand{\@seccntformat}[1]{\relax}
 
 \endinput
+
