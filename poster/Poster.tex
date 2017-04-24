@@ -1,0 +1,237 @@
+%TODO:  fix all figure numbers
+%	make all code screenshots the same width
+
+
+
+%% Use the hmcposter class with the clinic document-class option.
+\documentclass[thesis]{hmcposter}
+\usepackage{graphicx}
+\usepackage{natbib}
+\usepackage{booktabs}
+\usepackage{subfig}
+\usepackage{amsmath}
+\usepackage{textcomp}
+%\usepackage{url}
+\usepackage{listings}
+
+\usepackage{verbatim}
+
+% Added by jeramey
+\usepackage{caption}
+
+% Added by cyrust
+\usepackage{hyperref} % replaces url package
+
+%% For a Clinic poster, there is no author (the author is the team).
+
+%% Project Year.
+%% The year is provided using the \year command.
+\posteryear{2017}
+
+%% Project Title.
+%% The title of the poster should probably be the name of your
+%% Clinic project.
+\title{Common Abstract Syntax Tree (AST) for Automated Software Analysis of Homework Assignments in Submitty}
+\author{Elizabeth Dinella, Ana Milanova, and Barbara Cutler}
+
+
+%%somehow cram names of the people going in under the title
+
+%% Sponsor's Logo.
+%% The name (base name only; no extension) of an image file with
+%% the sponsor's logo.  Ideally, you'll have a PDF version that is
+%% resolution-independent.  If not, you'll need a high-resolution
+%% PNG file to allow us to print it at a large size without the
+%% image becoming blurred.
+\classlogo{lgplogo2cm}
+
+%% Optional -- if your sponsor's logo looks too small or too big,
+%% you can adjust its width with the \sponsorlogowidth command.
+%% (The height of the logo image is automatically adjusted to
+%% preserve the image's aspect ratio.)
+%%
+%% Note that the argument must be a TeX length; for example, 3in,
+%% 5cm, 120pt, etc.  The default width is 2in.
+\classlogowidth{2in}
+
+
+%% Optional -- if your sponsor is hot about their intellectual
+%% property and insists on having a copyright statement on the
+%% poster, you can use the \copyrightholder command to supply a
+%% name for a copyright holder for your poster.
+% \copyrightholder{Sponsoring Corporation, Inc.}
+
+\raggedcolumns
+
+%% Define the \BibTeX command, used in our example document.
+\providecommand{\bibtex}{{\rmfamily B\kern-.05em%
+    \textsc{i\kern-.025em b}\kern-.08em%
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+
+\pagestyle{fancy}
+
+\begin{document}
+
+\begin{poster}
+
+\section{Static Analysis}
+Static analysis is a critical tool to ensure software security and dependability. In industry and academia, static analysis can be used to find potential bugs or design problems. On "Submitty", an open source homework server created at RPI, static analysis is used to ensure structural correctness on homework assignments. This functionality is used in RPI's Computer Science 1 (CSCI 1100) to automatically grade small in-lecture exercises. Information beyond the textual output of the program would be valuable to assess knowledge. For example, students in CS1 are typically asked to "re-write" a simple for loop using a while loop (figure a). In this exercise, the code containing a for loop, and the code containing a while loop would have the same textual output. However, it would be impractical for each assignment to be individually graded by the teaching staff. Static analysis tools are, in some cases, necessary to accurately asses student's progress.
+
+Additionally, static analysis is superior to simplier alternative methods. For example, running grep on the student's code could cause false positives. This situation is shown in figure c. Aditionally, static analysis can be used to detect more complex structures such as class heirarchies and exception handling.
+
+\begin{figure}
+\begin{center}
+\subfloat[Initial Code]{\label{fig:Initial Code}\fbox{\includegraphics[width=5in]{initialCode}}}
+\end{center}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\subfloat[Correct Student Rewrite]{\label{fig:Correct Student Rewrite}\fbox{\includegraphics[width=5in]{studentRewrite}}}
+\hspace{0.3in}
+\subfloat[Incorrect Student Rewrite]{\label{fig:Correct Student Rewrite}\fbox{\includegraphics[width=5in]{studentRewriteError}}}
+\end{center}
+\end{figure}
+
+
+
+\section{Motivation}
+Static analysis tools have been requested in many other courses. These curriculums include multiple programming languages such as Python, C++, and Java. To extend simple static analysis of while/for loop detection to C++ and Java, the entire framework must be re-written in each language. This requires a large code base that depends upon extensive development each time a new language is used. It may seem excessive to create an entire new framework for each language, but it is necessary due to the uniqueness of each languages intermediate code representation. During parsing and semantic analysis, an Abstract Syntax Tree (AST) is created to represent code structure. In each language, there are drastic AST differences. 
+
+\section{Introduction}
+Our project builds a common AST which captures the structural similarity of the different ASTs and covers the use cases for static analysis on Submitty. The common AST is extracted from C++ and Python code and is stored in a standardized XML format. Extraction occurs using Clang/LLVM AST matchers and the Python AST module. This framework allows a simple process for adding static analysis cases in any programming language. 
+The common AST captures relevant structures from Python and C++. 
+
+\vspace{0.3in}
+\begin{figure}
+\begin{center}
+\subfloat[Common AST]{\label{fig:Common AST}\fbox{\includegraphics[width=10in]{AST}}}
+%\hspace{0.3in}%
+\end{center}
+\end{figure}
+\vspace{0.3in}
+
+Consider the following motivating example: A student in an introductory computer science course is learning about for loops. A homework problem is assigned to test the student's knowledge. The assignment requires that the student creates a loop in Python or C++ that prints all odd numbers between 1 and 10. By only checking textual output, Submitty would not verify that the student's code actually includes any for loops. Without static analysis, a non-automated TA or instructor grade would be required. Consider the following correct solutions to this assignment:
+
+%MAKE THE PYTHON SOLUTION VERTICALLY CENTERED
+\begin{figure}
+\begin{center}
+\subfloat[Python Solution]{\label{fig:Python Solution}\fbox{\includegraphics[width=5in]{pythonassign}}}
+\hspace{0.4in}
+\subfloat[C++ Solution]{\label{fig:Python Solution}\fbox{\includegraphics[width=5in]{c++assign}}}
+\end{center}
+\end{figure}
+
+%TALK ABOUT HOW MY TOOL WOULD BE IDEA FOR THIS 
+\section{Standardized XML Format}
+
+The first phase in a compiler is lexical analysis. In this phase, a compiler that strips all irrelevant information such as comments and whitespace from the source code. It then breaks the code into a series of tokens to be used in further phases in compiling.
+\vspace{0.5in}
+
+We begin with a process similar to lexical analysis. In the phase, we:
+
+\begin{itemize}
+\item Remove all information that is irrelevant to the Submitty use cases 
+	\begin{itemize}
+	\item Like lexical analysis, comments and whitespace are also removed
+	\end{itemize}
+\item output a sequence of tokens in the following format: \texttt{<node, level>}
+	\begin{itemize}
+	\item \texttt{node} is the name of the corresponding structure in the source code. It may represent any of the productions in the common grammar (figure d).
+	\item \texttt{level} represents the depth in the syntax tree. For example, in figure d, the while loop is a child of the outer python module. So, the while loop has a level of 2. The while loop holds its body as a child. The body contains one child, the augmented assignment of p. So, "p++" has a level of 4, and the token reads: \texttt{<augAssign,4>}
+	\end{itemize}
+\end{itemize}
+\vspace{0.5in}
+
+This format is created using third party libraries that allow users to process the abstract syntax trees of external programs. For C++, Clang/LLVM AST Matchers are used to traverse the AST of an input file. During traversal, when a node relevant to the use cases is found, a token is created and printed to an output file. A similar process occurs for Python using the Python AST library.
+
+Figures e and f show the standardized XML output from the two assignment solutions.
+
+\begin{figure}
+\begin{center}
+\subfloat[Level Example]{\label{fig:Level Example}\fbox{\includegraphics[width=5in]{levelExample}}}
+\end{center}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\subfloat[Python Standardized XML]{\label{fig:Python Standardized XML}\fbox{\includegraphics[width=5in]{pythonXML}}}
+\hspace{0.4in}
+\subfloat[C++ Standardized XML]{\label{fig:C++ Standardized XML}\fbox{\includegraphics[width=5in]{C++XML}}}
+\end{center}
+\end{figure}
+
+\section{Recursive Decent Parser}
+After lexical analysis, a compiler typically performs syntax analysis. In this phase, tokens from lexical analysis are taken as input. The tokens are compared to the grammar and a syntax tree is generated. 
+
+\vspace{0.5in}
+
+We again, perform a similar process to recursively create a syntax tree in a depth first top-down order.
+\begin{itemize}
+\item The standardized XML output from the first step is used as input
+\item At each level of the recursion the token in the AST is dispatched to an appropriate processing function based on the node type
+	\begin{itemize}
+	\item There is a processing function for each production that strongly resembles the grammer. For example, the production for a FunctionDef shown in figure d, has an Identifier for its name and a CompoundStmt for its body. The processing function for a FunctionDef is shown in figure j. In each processing function, a class of type corresponding to the input token is created. The member variables are then initialized recursively. In this way, a node's children are stored in a has-a pointer relationship. 
+	\end{itemize}
+\end{itemize}
+
+%ADD PRINT FUNCTION AND OUTPUT IF YOU NEED MORE CONTENT
+
+\vspace{0.5in}
+
+\begin{figure}
+\begin{center}
+\subfloat[FunctionDef Processing Function]{\label{fig:FunctionDef Processing Function}\fbox{\includegraphics[width=10in]{functionDef}}}
+\end{center}
+\end{figure}
+
+
+
+\section{Use Cases}
+The following use cases were determined by considering input from instructors using Submitty:
+\begin{itemize}
+\item{Detecting or counting if statements}
+	\begin{itemize}
+		\item {Nested if statements}
+		\item {Dangling else cases}
+	\end{itemize}
+\item{Detecting or counting for/while loops}
+	\begin{itemize}
+		\item {Loops containing nested if statements}
+	\end{itemize}
+\item{Detecting language specific keywords such as "goto", "malloc", "auto", etc}	
+\item{Detecting member function calls from an outside class such as "vector.erase()"}
+\item{Counting a specific function call}
+\item{Detecting exceptions and ensuring a corresponding handler}
+\item{Detecting class hierarchies and relationships}
+\end{itemize}
+
+\section{Ongoing Work}
+\begin{itemize}
+\item{Implementation of use cases}
+\item{Large scale testing on RPI Data Structures (CS 1200) and RPI Computer Science 1 (CS 1100) assignments}
+\item{Possible extension of framework to include Java}
+\end{itemize}
+
+
+\section{Related Submitty Publications}
+\begin{itemize}
+\item \textit{User Experience and Feedback on the RPI Homework Submission Server}, Wong, Sihsobhon, Lindquist, Peveler, Cutler, Breese, Tran, Jung, and Shaw, SIGCSE 2016 Poster 
+\item \textit{A Flexible Late Day Policy Reduces Stress and Improves Learning} Tyler, Peveler, and Cutler,
+SIGCSE 2017 Poster
+\item \textit{Submitty: An Open Source, Highly Configurable Platform for Grading of Programming Assignments}, Peveler, Tyler, Breese, Cutler, and Milanova, SIGCSE 2017 Demo Presentation
+\end{itemize}
+
+\section{Acknowledgments}
+\begin{itemize}
+    \item Red Hat Software
+    \item Rensselaer Center for Open Source (RCOS)
+    \item \url{http://submitty.org/}
+    \item \url{https://github.com/Submitty/Submitty}
+\end{itemize}
+
+\end{poster}
+
+\end{document}
+
