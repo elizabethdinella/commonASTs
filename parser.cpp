@@ -5,7 +5,7 @@ using namespace std;
 //prototypes
 bool isExpr(string);
 bool isStmt(string);
-bool printDebug = false;
+bool printDebug = true;
 
 
 class Parser{
@@ -227,7 +227,6 @@ class Parser{
 			}
 
 			CompoundStmt* cs = new CompoundStmt();
-			cs->level = t->level;
 			while(getLookaheadToken()->level > t->level /*&& getLookaheadToken()->value != "END"*/){
 				if(isExpr(getLookaheadToken()->value)){
 					cs->body.push_back(parseExpr());	

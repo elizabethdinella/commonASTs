@@ -195,6 +195,16 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 					}
 
 				}
+			}else if(node == "CXXDestructor"){
+				CXXDestructorDecl* CD = (CXXDestructorDecl*) D;
+				if(!CD->isImplicit()){
+					output += "<functionDef," + level +">";
+					//add function name to the output
+					output += "\n<name: ~" + CD->getNameInfo().getAsString()
+						+ "," + nextLevel + ">";
+				}
+
+
 			}else if(node == "CXXConstructor"){
 				CXXConstructorDecl* CD = (CXXConstructorDecl*) D;
 				if(!CD->isImplicit()){
