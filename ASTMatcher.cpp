@@ -26,6 +26,7 @@ using namespace std;
 vector<string> includeList;
 
 bool debugPrint = false;
+bool prevCondition = false;
 
 bool isFlowControl(const Stmt* parent, const Decl* x){
 	if(parent != NULL && strcmp(parent->getStmtClassName(), "ForStmt") == 0){
@@ -264,6 +265,8 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 
 				if(parent != NULL && strcmp(parent->getStmtClassName(), "IfStmt") == 0){
 					//suppress condition
+					
+					//prevCondition = condition;
 					const Stmt* firstChild = NULL;
 
 					auto children = parent->children();
@@ -276,7 +279,14 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 
 					if(firstChild != NULL  && x->getLocStart() == firstChild->getLocStart()){
 						condition = true;
+						prevCondition = true;
 					}
+
+					if(!condition && prevCondition){
+						output +="</cond,1>\n";	
+						prevCondition = false;
+					}
+
 
 					//find if else
 					const IfStmt* ifstmt = (IfStmt*) parent;
@@ -311,6 +321,10 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 					output += "<whileLoop";
 				}else if(node == "IfStmt"){
 					output += "<ifStatement";
+				}else if(node == "SwitchStmt"){
+					output += "<switch";
+				}else if(node == "CaseStmt"){
+					output += "<case";
 				}else if(node == "CXXMemberCallExpr"){
 					CXXMemberCallExpr* ce = (CXXMemberCallExpr*) x;
 					Expr* obj = ce->getImplicitObjectArgument();
@@ -396,14 +410,18 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 				}
 
 			}
+			
+			
 
-			if(output.size() != 0 /*&& !condition*/){
+			if(output.size() != 0 && output != "</cond,1>\n" /*&& !condition*/){
 				/*if(isElse){
 				  output += ", " + nextLevel + ">";
 				  }else{*/
 				output += ", " + level + ">";
 				//}
 				//outputIndentation(getLevelStmt(x));
+				cout << output << endl;
+			}else if(output.size() != 0){
 				cout << output << endl;
 			}
 			}
