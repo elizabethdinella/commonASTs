@@ -1,522 +1,26 @@
-#include <iostream>
-#include <list>
-#include <fstream>
-#include <stdlib.h>
+#include "parser.h"
 
 using namespace std;
 
 //prototypes
 bool isExpr(string);
 bool isStmt(string);
-class Stmt;
-class CompoundStmt;
-class Except;
-
 bool printDebug = false;
 
-string getIndentation(int level){
-	string ret = "";
-	for(int i=1; i<=level; i++){
-		ret += "\t";
-	}
-	return ret;
-}
-
-
-class Token{
-	public:
-		string value;
-		int level;
-};
-
-class ASTNode{
-	public:
-		virtual string getType() = 0;
-		virtual list<ASTNode*> getChildren() = 0;
-		virtual void printNode(int level){
-			cout << getIndentation(level);
-			cout << "-----------------" << endl;
-			cout << getIndentation(level);
-			cout << "- " << getType() << ": " << endl;
-			cout << getIndentation(level);
-			cout << "-----------------" << endl;
-
-		}
-
-		int level;
-
-};
-
-
-class Module : public ASTNode{
-	public:
-		string getType(){
-			return "Module";
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			list<ASTNode*>::iterator itr;
-			for(itr=body.begin(); itr != body.end(); itr++){
-				if((*itr) != NULL){
-					children.push_back((ASTNode*)*itr);
-				}
-			}
-			return children;
-		}
-
-		list<ASTNode*> body;
-};
-
-class Expr : public ASTNode{
-	virtual string getType() = 0;
-	virtual list<ASTNode*> getChildren() = 0;
-};
-
-class Stmt : public ASTNode{
-	virtual string getType() = 0;
-	virtual list<ASTNode*> getChildren() = 0;
-};
-
-
-class Identifier : public Expr{
-	public:
-		string getType(){
-			return "Identifier";
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			return children;
-		}	
-
-		void printNode(int level){
-			cout << getIndentation(level);
-			cout << "-----------------" << endl;
-			cout << getIndentation(level);
-			cout << "- Indentifier: " << endl;
-			cout << getIndentation(level);
-			cout << "- Name: " << name << endl;
-			cout << getIndentation(level);
-			cout << "-----------------" << endl;
-		}	
-
-		string name;
-};
-
-class FunctionDef : public Stmt{
-	public:
-		string getType(){
-			return "FunctionDef";
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			children.push_back(name);
-			children.push_back((ASTNode*)compoundStmt);
-			return children;	
-		}
-
-		Identifier* name;
-		CompoundStmt* compoundStmt;
-};
-
-class VariableDecl: public Stmt{
-	public:
-		string getType(){
-			return "VariableDecl";
-		}	
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			if(right){
-				children.push_back(right);
-			}
-			return children;
-		}
-
-		Expr* right;
-};
-
-class For : public Stmt{
-	public:
-		string getType(){
-			return "For";
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			children.push_back((ASTNode*)compoundStmt);
-			return children;
-		}
-
-		CompoundStmt* compoundStmt;
-
-};
-
-class While: public Stmt{
-	public:
-		string getType(){
-			return "While";
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			if(test){
-				children.push_back(test);
-			}
-			children.push_back((ASTNode*)compoundStmt);
-			return children;
-		}
-
-		Expr* test;
-		CompoundStmt* compoundStmt;
-};
-
-class If: public Stmt{
-	public:
-		string getType(){
-			return "If";
-		}
-
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			if(test){
-				children.push_back(test);
-			}
-			children.push_back((ASTNode*)body);
-			if(orelse){
-				children.push_back((ASTNode*)orelse);
-			}
-			return children;
-		}
-
-
-		Expr* test;
-		CompoundStmt* body;
-		Stmt* orelse;	
-};
-
-class Bases: public Stmt{
-	public:
-		string getType(){
-			return "Bases";
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			list<Identifier*>::iterator itr;
-			for(itr=data.begin(); itr != data.end(); itr++){
-				if(*itr){
-					children.push_back(*itr);
-				}
-			}
-			return children;
-		}
-
-		list<Identifier*> data;
-};
-
-class ClassDef : public Stmt{
-	public:
-		string getType(){
-			return "ClassDef";
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			children.push_back(name);
-
-			if(bases){
-				children.push_back(bases);
-			}
-
-			list<ASTNode*>::iterator itr2;
-			for(itr2=body.begin(); itr2 != body.end(); itr2++){
-				if(*itr2){
-					children.push_back(*itr2);
-				}	
-			}
-			return children;
-		}	
-
-		Identifier* name;
-		Bases* bases;
-		list<ASTNode*> body;
-};
-
-
-
-class Import: public Stmt{
-	public: 
-		string getType(){
-			return "Import";
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			list<Identifier*>::iterator itr;
-			for(itr=names.begin(); itr != names.end(); itr++){
-				if(*itr){
-					children.push_back(*itr);
-				}
-			}
-			return children;
-		}
-
-
-		list<Identifier*> names;
-};
-
-class CompoundStmt : public Stmt{
-	public:
-		string getType(){
-			return "CompoundStmt";
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			list<ASTNode*>::iterator itr;
-			for(itr=body.begin(); itr != body.end(); itr++){
-				if(*itr){
-					children.push_back(*itr);
-				}
-			}
-			return children;
-		}
-
-
-		list<ASTNode*> body;
-};
-
-class Return: public Stmt{
-	public:
-		string getType(){
-			return "Return";
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			if(value){
-				children.push_back(value);
-			}
-			return children;
-		}
-
-		Expr* value;
-};
-
-
-class Assign: public Stmt{
-	public:
-		string getType(){
-			return "Assign";
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			list<Expr*>::iterator itr; 
-			for(itr=targets.begin(); itr != targets.end(); itr++){
-				if(*itr){
-					children.push_back(*itr);
-				}
-			}
-			if(value){
-				children.push_back(value);
-			}
-			return children;
-		}
-
-
-		list<Expr*> targets;
-		Expr* value;	
-};
-
-class AugAssign: public Stmt{
-	public:
-		string getType(){
-			return "AugAssign";
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			if(target){
-				children.push_back(target);
-			}
-			if(value){
-				children.push_back(value);
-			}
-			return children;
-		}
-
-
-		Expr* target;
-		Expr* value;
-};
-
-class Raise: public Stmt{
-	string getType(){
-		return "Raise";
-	}
-	
-	list<ASTNode*> getChildren(){
-		list<ASTNode*> children;
-		return children;
-	}
-};
-
-class Exec: public Stmt{
-	public:
-		string getType(){
-			return "Exec";	
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			return children;
-		}
-};
-
-class Try: public Stmt{
-	public:
-		string getType(){
-			return "Try";
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			children.push_back(body);
-			children.push_back((ASTNode*)except);
-			return children;
-		}
-
-		CompoundStmt* body;
-		Except* except;
-};
-
-class Except: public Stmt{
-	public:
-		string getType(){
-			return "Except";
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			children.push_back(body);
-			return children;	
-		}
-
-		CompoundStmt* body;
-};
-
-class Call: public Expr{
-	public:
-		string getType(){
-			return "Call";	
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			return children;
-		}
-
-		void printNode(int level){
-			cout << getIndentation(level);
-			cout << "-----------------" << endl;
-			if(obj.size() > 0){
-				cout << getIndentation(level);
-				cout << "- Object: " << obj << endl;
-			}
-			cout << getIndentation(level);
-			cout << "- Calling func: " << func << endl;
-			cout << getIndentation(level);
-			cout << "-----------------" << endl;
-		}
-
-		string func;
-		string obj;
-		int level;
-};
-
-class BinOp: public Expr{
-	public:
-		string getType(){
-			return "BinOp";
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			if(left){
-				children.push_back(left);
-			}
-			if(right){
-				children.push_back(right);
-			}
-			return children;
-		}
-
-
-		Expr* left;
-		Expr* right;
-};
-
-class UnaryOp: public Expr{
-	public:
-		string getType(){
-			return "UnaryOp";
-		}
-
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			if(operand){
-				ASTNode* cast = (ASTNode*) operand;
-				children.push_back(cast);
-			}
-			return children;
-		}
-
-
-		Expr* operand;		
-};
-
-class Comparison: public Expr{
-	public:
-		string getType(){
-			return "Comparison";
-		}
-
-		list<ASTNode*> getChildren(){
-			list<ASTNode*> children;
-			if(left){
-				children.push_back(left);		
-			}
-
-			list<Expr*>::iterator itr;
-			for(itr=comparators.begin(); itr != comparators.end(); itr++){
-				if(*itr){
-					children.push_back(*itr);
-				}
-			}
-
-			return children;
-		}
-
-		Expr* left;
-		list<Expr*> comparators;
-		int level;
-};
 
 class Parser{
 	public:
-		Parser(const string& filename): file(filename.c_str()) {} ;
+
+		Parser(const string& filename) : file(filename.c_str()) {};
+
+		Parser(const string& filename, vector<string> nodesToCount): file(filename.c_str()) {
+			visitor = CounterVisitor(nodesToCount);
+		}
 
 
 		Module* parseModule(){
 			getToken();
 			Module* module = new Module();
-			module->level = 1;
 			while(getLookaheadToken()->value != "END"){
 				if(isExpr(getLookaheadToken()->value)){
 					module->body.push_back(parseExpr());
@@ -548,8 +52,12 @@ class Parser{
 				return (Stmt*) parseAssign(t->level);
 			}else if(t->value == "augAssign"){
 				return (Stmt*) parseAugAssign(t->level);
+			}else if(t->value == "switch"){
+				return (Stmt*) parseSwitch();
+			}else if(t->value == "case"){
+				return (Stmt*) parseCase(t->level);
 			}else if(t->value == "forLoop"){
-				return (Stmt*) parseFor(t->level);
+				return (Stmt*) parseFor();
 			}else if(t->value == "whileLoop"){
 				return (Stmt*) parseWhile(t->level);
 			}else if(t->value == "ifStatement"){
@@ -609,7 +117,9 @@ class Parser{
 			FunctionDef* fd = new FunctionDef();			
 			fd->level = level;
 			fd->name = parseIdentifier();
-			fd->compoundStmt = parseCompoundStmt();
+			if(getLookaheadToken()->value == "compoundStmt"){
+				fd->compoundStmt = parseCompoundStmt();
+			}//else its a prototype
 			return fd;
 		}
 
@@ -742,6 +252,23 @@ class Parser{
 			return ret;
 		}
 
+		Switch* parseSwitch(){
+			Switch* s = new Switch();
+			if(getLookaheadToken()->value != "compoundStmt"){
+				s->cond = parseExpr();
+			}
+
+			s->compoundStmt = parseCompoundStmt();
+
+			return s;
+		}
+
+		Case* parseCase(int level){
+			Case* c = new Case();
+			c->body = parseBody(level);
+			return c;
+		}
+
 
 		Assign* parseAssign(int level){
 			Assign* assign = new Assign();
@@ -771,18 +298,27 @@ class Parser{
 		}
 
 
-		For* parseFor(int level){
+		For* parseFor(){
 			For* f = new For();
-			f->level = level;
+			while(getLookaheadToken()->value != "compoundStmt"){
+				if(isExpr(getLookaheadToken()->value)){
+					f->stopCond.push_back(parseExpr());	
+				}else if(isStmt(getLookaheadToken()->value)){
+					f->stopCond.push_back(parseStmt());	
+				}else{
+					cerr << "ERROR: Attempted to add value which is not an EXPR or STMT" << endl;	
+				}
+
+			}
+
 			f->compoundStmt = parseCompoundStmt();
 			return f;
 		}
 
 		While* parseWhile(int level){
 			While* w = new While();
-			w->level = level;
-			if(getLookaheadToken()->level > level && getLookaheadToken()->value != "compoundStmt"){
-				w->test = parseExpr();
+			while(getLookaheadToken()->level > level && getLookaheadToken()->value != "compoundStmt"){
+				w->test.push_back(parseExpr());
 			}
 			w->compoundStmt = parseCompoundStmt();
 			return w;
@@ -791,9 +327,8 @@ class Parser{
 
 		If* parseIf(int level){
 			If* i = new If();
-			i->level = level;
 
-			if(getLookaheadToken()->level > level && getLookaheadToken()->value != "compoundStmt"){
+			while(getLookaheadToken()->value != "/cond"){
 				if(printDebug){
 					cout << "parsing If's test: " << getLookaheadToken()->value << endl;
 				}
@@ -802,10 +337,21 @@ class Parser{
 			}
 
 			if(printDebug){
+				cout << "reached /cond" << endl;
+			}
+			getToken();
+
+
+			if(printDebug){
 				cout << "parsing If's compoundStmt: " << getLookaheadToken()->value << endl;
 			}
 
-			i->body = parseCompoundStmt();
+			if(getLookaheadToken()->value == "compoundStmt"){
+				i->compoundStmt = parseCompoundStmt();
+			}else{
+				i->body = parseBody(level);	
+			}
+
 
 			if(getLookaheadToken()->level > level && getLookaheadToken()->value == "elseStatement"){
 				i->orelse = parseCompoundStmt();
@@ -847,11 +393,11 @@ class Parser{
 
 		VariableDecl* parseVariableDecl(int level){
 			VariableDecl* vd = new VariableDecl();
-			vd->level = level;
 
-			if(getLookaheadToken()->level > level){
-				vd->right = parseExpr();
-			}
+			/*
+			   if(getLookaheadToken()->level > level){
+			   vd->right = parseExpr();
+			   }*/
 
 			return vd;
 		}
@@ -954,8 +500,25 @@ class Parser{
 
 		}
 
+
+		int getFor() const{
+			//	return visitor.countFor;
+			return visitor.getFor();
+		}
+
+
+		int getModule() {
+			return visitor.getModule();
+		}
+
+		void traverse(ASTNode* node){
+			node->accept(visitor);
+		}
+
+
 	private:
 		ifstream file;
+		CounterVisitor visitor;
 
 		string getWord(string word){
 			size_t pos = word.find(",");	
@@ -999,7 +562,7 @@ bool isStmt(string val){
 	}
 
 	string compVal("name");
-	return val == "functionDef" || val == "classDef" || val == "compoundStmt" || val == "return" || val == "assignment" || val == "augAssign" || val == "forLoop" || val == "whileLoop" || val == "ifStatement" || val == "importing" || val == "exec" || val == "variableDecl" || val == "try" || val == "except" || val == "raisingException" || val.compare(0, compVal.length(), compVal) == 0;
+	return val == "functionDef" || val == "classDef" || val == "compoundStmt" || val == "return" || val == "assignment" || val == "augAssign" || val == "forLoop" || val == "whileLoop" || val == "ifStatement" || val == "importing" || val == "exec" || val == "variableDecl" || val == "try" || val == "except" || val == "raisingException" || val == "switch" || val == "case" || val.compare(0, compVal.length(), compVal) == 0;
 }
 
 
@@ -1023,7 +586,23 @@ int main(int argc, char** argv){
 		exit(1);
 	}
 
-	Parser parser(argv[1]);
+	string inputFile = argv[1];
+	vector<string> nodesToCount;
+	argv += 2;
+	for(int i=2; i<argc; i++){
+		nodesToCount.push_back(*argv);	
+		argv++;
+	}
+
+	//CounterVisitor cv(nodesToCount);
+
+
+	Parser parser(inputFile, nodesToCount);
 	Module* m = parser.parseModule();
 	printAST(m);
+
+	parser.traverse(m);
+
+	cout << parser.getFor() << endl;
 }
+
