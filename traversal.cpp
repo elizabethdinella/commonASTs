@@ -1,296 +1,351 @@
-#include <iostream>
-#include <vector>
-#include <stdlib.h>
-
-
-class Module;
-class Identifier;
-class FunctionDef;
-class For;
-class While;
-class VariableDecl;
-class If;
-class Bases;
-class ClassDef;
-class Import;
-class CompoundStmt;
-class Return;
-class Assign;
-class AugAssign;
-class Raise;
-class Exec;
-class Try;
-class Except;
-class Call;
-class BinOp;
-class UnaryOp;
-class Comparison;
-class Switch;
-class Case;
-
+#include "traversal.h"
+#include "parser.h"
 
 using namespace std;
 
+string getIndentation(int level){
+	string ret = "";
+	for(int i=1; i<=level; i++){
+		ret += "\t";
+	}
+	return ret;
+}
+
 //create class to count
-//in that class, there will be functions for visiting each type of node
-class CounterVisitor{
-	public:
-		CounterVisitor(){};
+//in that class, there will be functions for CounterVisitor::visiting each type of node
+//class CounterVisitor/*: public Visitor*/{
+CounterVisitor::CounterVisitor(){};
 
-		CounterVisitor(vector<string> nodesToCount){
-			
-			for(unsigned int i=0; i<nodesToCount.size(); i++){
-				string node = nodesToCount[i];
-				if(node == "Module"){
+CounterVisitor::CounterVisitor(map<string, vector<string> > nodesToCount){
 
-				}else if(node == "Identifier"){
+	this->nodesToCount = nodesToCount;
 
-				}else if(node == "FunctionDef"){
+	map<string, vector<string> >::iterator itr;
+	for(itr = nodesToCount.begin(); itr != nodesToCount.end(); itr++){
+		string node = itr->first; 
+		if(node == "-Module"){
 
-				}else if(node == "For"){
+		}else if(node == "-Identifier"){
 
-				}else if(node == "While"){
+		}else if(node == "-FunctionDef"){
 
-				}else if(node == "If"){
-				
-				}else if(node == "ClassDef"){
+		}else if(node == "-For"){
 
-				}else if(node == "Import"){
+		}else if(node == "-While"){
 
-				}else if(node == "CompoundStmt"){
+		}else if(node == "-If"){
 
-				}else if(node == "Return"){
+		}else if(node == "-ClassDef"){
 
-				}else if(node == "Assign"){
+		}else if(node == "-Import"){
 
-				}else if(node == "AugAssign"){
+		}else if(node == "-CompoundStmt"){
 
-				}else if(node == "Raise"){
+		}else if(node == "-Return"){
 
-				}else if(node == "Exec"){
+		}else if(node == "-Assign"){
 
-				}else if(node == "Try"){
+		}else if(node == "-AugAssign"){
 
-				}else if(node == "Except"){
+		}else if(node == "-Raise"){
 
-				}else if(node == "Call"){
+		}else if(node == "-Exec"){
 
-				}else if(node == "BinOp"){
+		}else if(node == "-Try"){
 
-				}else if(node == "UnaryOp"){
+		}else if(node == "-Except"){
 
-				}else if(node == "Comparison"){
+		}else if(node == "-Call"){
 
-				}else{
-					cerr << "ERROR: The input node: " << node;
-					cerr << " does not fit the grammar. Exiting!" << endl;
-					exit(1);
-				}
+		}else if(node == "-BinOp"){
 
-			}	
+		}else if(node == "-UnaryOp"){
 
+		}else if(node == "-Comparison"){
 
+		}else if(node == "-ForbidCall"){
 
-			countModule = 0;
-			countIdentifier = 0; 
-			countFunctionDef = 0;
-			countVariableDecl = 0;
-			//countFor = 0;
-			countWhile = 0;
-			countIf = 0;
-			countClassDef = 0;
-			countImport = 0;
-			countCompoundStmt = 0; 
-			countReturn = 0;
-			countAssign = 0;
-			countAugAssign = 0;
-			countRaise = 0;
-			countExec = 0;
-			countTry = 0;
-			countExcept = 0;
-			countBases = 0;
-			countCall = 0;
-			countBinOp = 0;
-			countUnaryOp = 0;
-			countComparison = 0;
-			countCase = 0;
-			countSwitch = 0;	
+		}else if(node == "-Complexity"){
 
+		}else{
+			cerr << "ERROR: The input case: " << node;
+			cerr << " does not fit the use cases. Exiting!" << endl;
+			exit(1);
 		}
 
-		//visit for each type of not abstract node
-		void visit(For* f){
-			countFor++;	
-		}
-	
-		int getFor() const{
-			return countFor;
-		}
-
-		int getModule(){
-			return countModule;
-		}
+	}	
 
 
-		void visit(Module* m){
-			countModule += 1;
-		}
 
-		void visit(Identifier* i){
-			countIdentifier += 1;
-		}
+	countModule = 0;
+	countIdentifier = 0; 
+	countFunctionDef = 0;
+	countVariableDecl = 0;
+	countFor = 0;
+	countWhile = 0;
+	countIf = 0;
+	countClassDef = 0;
+	countImport = 0;
+	countCompoundStmt = 0; 
+	countReturn = 0;
+	countAssign = 0;
+	countAugAssign = 0;
+	countRaise = 0;
+	countExec = 0;
+	countTry = 0;
+	countExcept = 0;
+	countBases = 0;
+	countCall = 0;
+	countForbiddenFuncCall = 0;
+	countBinOp = 0;
+	countUnaryOp = 0;
+	countComparison = 0;
+	countCase = 0;
+	countSwitch = 0;	
+	countArgs = 0;
 
-		void visit(FunctionDef* f){
+}
+
+//CounterVisitor::visit for each type of not abstract node
+
+
+int CounterVisitor::getFor() const{
+	return countFor;
+}
+
+int CounterVisitor::getModule() const{
+	return countModule;
+}
+
+int CounterVisitor::getIdentifier() const{
+	return countIdentifier;
+}
+
+int CounterVisitor::getFunctionDef() const{
+	return countFunctionDef;
+}
+
+int CounterVisitor::getVariableDecl() const{
+	return countFunctionDef;
+}
+
+int CounterVisitor::getWhile() const{
+	return countWhile;
+}
+
+int CounterVisitor::getSwitch() const{
+	return countSwitch;
+}
+
+int CounterVisitor::getArgs() const{
+	return countArgs;
+}
+
+int CounterVisitor::getCase() const{
+	return countCase;
+}
+
+int CounterVisitor::getIf() const{
+	return countIf;
+}
+
+int CounterVisitor::getClassDef() const{
+	return countClassDef;
+}
+
+int CounterVisitor::getImport() const{
+	return countImport;
+}
+
+int CounterVisitor::getReturn() const{
+	return countReturn;
+}
+
+int CounterVisitor::getCompoundStmt() const{
+	return countCompoundStmt;
+} 
+
+int CounterVisitor::getAssign() const {
+	return countAssign;
+}
+
+int CounterVisitor::getRaise() const{
+	return countRaise;
+}
+
+int CounterVisitor::getExec() const{
+	return countExec;
+}
+
+int CounterVisitor::getTry() const{
+	return countTry;
+}
+
+int CounterVisitor::getExcept() const{
+	return countExcept;
+}
+
+int CounterVisitor::getBases() const{
+	return countBases;
+}
+
+int CounterVisitor::getCall() const{
+	return countCall;
+}
+
+int CounterVisitor::getForbiddenFuncCall() const{
+	return countForbiddenFuncCall;
+}
+
+int CounterVisitor::getBinOp() const{
+	return countBinOp;
+}
+
+int CounterVisitor::getUnaryOp() const{
+	return countUnaryOp;
+}
+
+int CounterVisitor::getComparison() const{
+	return countComparison;
+}
+
+int CounterVisitor::getComplexity() const{
+	return complexity; 
+}
+
+string CounterVisitor::getClassesAndBases() const{
+
+}
+
+void CounterVisitor::visit(For* f){
+	countFor += 1; 	
+}
+
+void CounterVisitor::visit(Module* m){
+	countModule += 1;
+}
+
+void CounterVisitor::visit(Identifier* i){
+	countIdentifier += 1;
+}
+
+void CounterVisitor::visit(FunctionDef* f){
+	if(nodesToCount["FunctionDef"].size() > 0){
+		string arg1 = nodesToCount["FunctionDef"][0];
+		if(f->name->name == arg1 || arg1.length() == 0 ){
+			complexity = f->complexity;
 			countFunctionDef += 1;
 		}
+	}else{
+		countFunctionDef += 1;
+	}
+}
 
-		void visit(VariableDecl* vd){
-			countVariableDecl += 1;
+void CounterVisitor::visit(VariableDecl* vd){
+	countVariableDecl += 1;
+}
+
+void CounterVisitor::visit(While* w){
+	countWhile += 1;
+}
+
+void CounterVisitor::visit(Switch* s){
+	countSwitch += 1;
+}
+
+void CounterVisitor::visit(Args* a){
+	countArgs += 1;
+}
+
+void CounterVisitor::visit(Case* c){
+	countCase += 1;
+}
+
+void CounterVisitor::visit(If* i){
+	countIf += 1;
+}
+
+void CounterVisitor::visit(ClassDef* cd){
+	countClassDef += 1;
+}
+
+void CounterVisitor::visit(Import* i){
+	countImport += 1;
+}
+
+
+void CounterVisitor::visit(Return* r){
+	countReturn += 1;
+}
+
+void CounterVisitor::visit(CompoundStmt* cs){
+	countCompoundStmt += 1;
+}
+
+void CounterVisitor::visit(Assign* a){
+	countAssign += 1;
+}
+
+
+void CounterVisitor::visit(AugAssign* a){
+	countAugAssign += 1;
+}
+
+
+void CounterVisitor::visit(Raise* r){
+	countRaise += 1;
+}
+
+
+void CounterVisitor::visit(Exec* e){
+	countExec += 1;
+}
+
+
+void CounterVisitor::visit(Try* t){
+	countTry += 1;
+}
+
+
+void CounterVisitor::visit(Except* e){
+	countExcept += 1;
+}
+
+void CounterVisitor::visit(Bases* b){
+	countBases += 1;
+}
+
+void CounterVisitor::visit(Call* c){
+	vector<string> vect = nodesToCount["Call"];
+	if(vect.size() == 2){
+		string arg1 = vect[0];
+		string arg2 = vect[1];
+		if((c->obj == arg1) && (c->func == arg2)){
+				countForbiddenFuncCall +=1;
 		}
-
-		void visit(While* w){
-			countWhile += 1;
+	}else if(vect.size() == 1){
+		string arg1 = vect[0];
+		if(c->func == arg1){
+			countForbiddenFuncCall +=1;
 		}
-
-		void visit(Switch* s){
-			countSwitch += 1;
-		}
-
-		void visit(Case* c){
-			countCase += 1;
-		}
-
-		void visit(If* i){
-			countIf += 1;
-		}
-
-		void visit(ClassDef* cd){
-			countClassDef += 1;
-		}
-
-		void visit(Import* i){
-			countImport += 1;
-		}
+	}else{
+		countCall += 1;
+	}
 
 
-		void visit(Return* r){
-			countReturn += 1;
-		}
+}
 
-		void visit(CompoundStmt* cs){
-			countCompoundStmt += 1;
-		}
-
-		void visit(Assign* a){
-			countAssign += 1;
-		}
+void CounterVisitor::visit(BinOp* bo){
+	countBinOp += 1;
+}
 
 
-		void visit(AugAssign* a){
-			countAugAssign += 1;
-		}
+void CounterVisitor::visit(UnaryOp* uo){
+	countUnaryOp += 1;
+}
+
+void CounterVisitor::visit(Comparison* c){
+	countComparison += 1;
+}
 
 
-		void visit(Raise* r){
-			countRaise += 1;
-		}
-
-
-		void visit(Exec* e){
-			countExec += 1;
-		}
-
-
-		void visit(Try* t){
-			countTry += 1;
-		}
-
-
-		void visit(Except* e){
-			countExcept += 1;
-		}
-
-		void visit(Bases* b){
-			countBases += 1;
-		}
-
-		void visit(Call* c){
-			countCall += 1;
-		}
-
-
-		void visit(BinOp* bo){
-			countBinOp += 1;
-		}
-
-
-		void visit(UnaryOp* uo){
-			countUnaryOp += 1;
-		}
-
-		void visit(Comparison* c){
-			countComparison += 1;
-		}
-
-	private:
-
-		int countModule;
-		int countIdentifier;
-		int countFunctionDef;
-		int countVariableDecl;
-		int countFor;
-		int countWhile;
-		int countIf;
-		int countClassDef;
-		int countImport;
-		int countCompoundStmt;
-		int countReturn;
-		int countAssign;
-		int countAugAssign;
-		int countRaise;
-		int countExec;
-		int countTry;
-		int countExcept;
-		int countBases;
-		int countCall;
-		int countBinOp;
-		int countUnaryOp;
-		int countComparison;
-		int countCase;
-		int countSwitch;
-
-		/*	
-		bool countModule;
-		bool countIdentifier;
-		int countFunctionDef;
-		int countVariableDecl;
-		int countFor;
-		int countWhile;
-		int countIf;
-		int countClassDef;
-		int countImport;
-		int countCompoundStmt;
-		int countReturn;
-		int countAssign;
-		int countAugAssign;
-		int countRaise;
-		int countExec;
-		int countTry;
-		int countExcept;
-		int countCall;
-		int countBinOp;
-		int countUnaryOp;
-		int countComparison;
-		*/
-
-		//member variables for each thing we might want to count in the AST example - int forCount, int funcCount
-
-
-};
-
-
-/*
-//traversal
-int main(int argc, char** argv){
-	//argv is a list of nodes that we can count
-}*/
