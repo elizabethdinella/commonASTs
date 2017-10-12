@@ -72,7 +72,7 @@ class Parser{
 				cerr << "Parsing Stmt: " << t->value << endl;
 			}
 			if(t->value == "functionDef"){
-				return (Stmt*) parseFunctionDef();
+				return (Stmt*) parseFunctionDef(t->level);
 			}else if(t->value == "classDef"){
 				return (Stmt*) parseClassDef(t->level);
 			}else if(t->value == "compoundStmt"){
@@ -91,6 +91,8 @@ class Parser{
 				return (Stmt*) parseFor();
 			}else if(t->value == "whileLoop"){
 				return (Stmt*) parseWhile(t->level);
+			}else if(t->value == "do"){
+				return (Stmt*) parseDoWhile(t->level);
 			}else if(t->value == "ifStatement"){
 				return (Stmt*) parseIf(t->level);
 			}else if(t->value == "importing"){
@@ -144,12 +146,30 @@ class Parser{
 			return NULL;
 		}
 
-		FunctionDef* parseFunctionDef(){
+		FunctionDef* parseFunctionDef(int level){
 			FunctionDef* fd = new FunctionDef();			
 			fd->name = parseIdentifier();
 			if(getLookaheadToken()->value == "compoundStmt"){
 				fd->compoundStmt = parseCompoundStmt();
-			}//else its a prototype
+			}//else its a prototype or there is an init list
+			else{
+				if(getLookaheadToken()->level > level && getLookaheadToken()->value != "compoundStmt"){
+					if(printDebug){
+						cerr << "parsing init list" << endl;
+					}
+
+					fd->initList = parseBody(level);					
+
+					if(printDebug){
+						cerr << "done parsing init list" << endl;
+					}
+
+					fd->compoundStmt = parseCompoundStmt();
+				}
+
+			}
+			
+			
 			return fd;
 		}
 
@@ -232,11 +252,13 @@ class Parser{
 			list<ASTNode*> body;
 
 			Token* lt = getLookaheadToken();
-			while(lt->level > level){
+			while(lt->level > level && lt->value != "compoundStmt"){
 				if(isExpr(lt->value)){
 					body.push_back(parseExpr());
 				}else if(isStmt(lt->value)){
 					body.push_back(parseStmt());
+				}else if(getLookaheadToken()->value == "END"){
+					break;
 				}else{
 					cerr << "ERROR: Attempted to add value which is not an EXPR or STMT" << endl;
 				}
@@ -338,7 +360,7 @@ class Parser{
 
 		Assign* parseAssign(int level){
 			Assign* assign = new Assign();
-			while(getLookaheadToken()->level > level /*&& getLookaheadToken()->value != "END"*/) {
+			while(getLookaheadToken()->level > level && getLookaheadToken()->value != "END") {
 				assign->targets.push_back(parseExpr());
 			}
 			return assign;
@@ -361,6 +383,8 @@ class Parser{
 					f->stopCond.push_back(parseExpr());	
 				}else if(isStmt(getLookaheadToken()->value)){
 					f->stopCond.push_back(parseStmt());	
+				}else if(getLookaheadToken()->value == "END"){
+					return f;
 				}else{
 					cerr << "ERROR: Attempted to add value which is not an EXPR or STMT" << endl;	
 				}
@@ -369,6 +393,16 @@ class Parser{
 
 			f->compoundStmt = parseCompoundStmt();
 			return f;
+		}
+
+		DoWhile* parseDoWhile(int level){
+			DoWhile* dw = new DoWhile();
+			dw->compoundStmt = parseCompoundStmt();
+
+			while(getLookaheadToken()->level > level){
+				dw->test.push_back(parseExpr());
+			}						
+			return dw;		
 		}
 
 		While* parseWhile(int level){
@@ -625,7 +659,7 @@ bool isStmt(string val){
 
 
 	string compVal("name");
-	return val == "functionDef" || val == "classDef" || val == "compoundStmt" || val == "return" || val == "assignment" || val == "augAssign" || val == "forLoop" || val == "whileLoop" || val == "ifStatement" || val == "importing" || val == "exec" || val == "variableDecl" || val == "try" || val == "except" || val == "raisingException" || val == "switch" || val == "case" || val.compare(0, compVal.length(), compVal) == 0;
+	return val == "functionDef" || val == "classDef" || val == "compoundStmt" || val == "return" || val == "assignment" || val == "augAssign" || val == "forLoop" || val == "whileLoop" || val == "do" || val == "ifStatement" || val == "importing" || val == "exec" || val == "variableDecl" || val == "try" || val == "except" || val == "raisingException" || val == "switch" || val == "case" || val.compare(0, compVal.length(), compVal) == 0;
 }
 
 
@@ -664,9 +698,6 @@ int main(int argc, char** argv){
 		vector<string> args;	
 		//ADD SOME ERROR HANDLING. MAKE SURE THE USER HAS SOME ARGUMENTS SUCH AS VOID
 
-		if(argsString.find(",") == string::npos){
-			args.push_back(argsString);
-		}
 
 		while(argsString.find(",") != string::npos){
 			int index = argsString.find(",");
@@ -698,7 +729,7 @@ int main(int argc, char** argv){
 		}else if(itr->first == "-ForbidCall"){
 			cout << "number of forbidden calls " << parser.getForbiddenFuncCall() << endl;
 		}else if(itr->first == "-Complexity"){
-			cout << "complexity " << parser.getComplexity() << endl;
+			cout << "complexity n^" << parser.getComplexity() << endl;
 		}else if(itr->first == "-ClassBases"){
 			cout << parser.getClassesAndBases() << endl;
 		}

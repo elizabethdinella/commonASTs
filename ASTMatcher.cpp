@@ -32,14 +32,34 @@ vector<string> includeList;
 //(regardless of if we care about it for the use cases)
 bool debugPrint = false;
 bool allNodes = debugPrint || false;
+bool callStackDebug = debugPrint || false;
+
+stack<const Stmt*> callStack;
 
 bool prevCondition = false;
 bool previousRhsDecl = false;
 bool previousCallArg = false;
+bool previousMemberCallArg = false;
 bool previousConstructorCallArg = false;
 bool previousTempConstructorCallArg = false;
 
 int numClosingArgsNeeded = 0;
+int numClosingVarsNeeded = 0;
+
+
+void printCallStack(){
+	stack<const Stmt*> tempStack = callStack;
+
+	cout << endl;
+	cout << "CALL STACK:" << endl;
+	cout << "------------------------------" << endl;
+	while(!tempStack.empty()){	
+		cout << tempStack.top()->getStmtClassName() << endl;;
+		tempStack.pop();
+	}
+	cout << "------------------------------" << endl;
+	cout << endl;
+}
 
 
 /*
@@ -82,6 +102,13 @@ bool isFunctionDef(const Decl* D){
 	return ((node == "CXXConstructor" || node == "CXXDestructor" || node == "CXXMethod") && !CD->isImplicit());
 }
 
+bool endsIn(const string& word, const string& ending){
+	if(word.length() < ending.length()){
+		return false;
+	}
+
+	return std::equal(ending.rbegin(), ending.rend(), word.rbegin());
+} 
 
 /*
    returns the first parent of input s that is of type Stmt
@@ -231,7 +258,7 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 			}
 
 
-			
+
 			string output = "";
 			//get the name of the node type
 			string node = D->getDeclKindName();
@@ -252,8 +279,32 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 			nextNextLevel = ss4.str();
 
 
-			if(!previousTempConstructorCallArg && !previousCallArg &&
-					((isParentDecl(D, "CXXConstructExpr") && isParentDeclInCurFile(D,"CXXConstructExpr")))){
+
+			if(callStackDebug && !callStack.empty()){
+				cerr << "decl: call stack top: " << callStack.top()->getStmtClassName() << endl;
+			}
+
+			//if top of stack is no longer a parent
+			while(!callStack.empty() && numClosingArgsNeeded > 0
+					&& !isParentDecl(D, callStack.top()->getStmtClassName())){
+
+				if(debugPrint){
+					cerr << "adding args" << endl;
+				}
+				numClosingArgsNeeded--;
+				output += "</args,1>\n";
+
+				callStack.pop();
+				if(callStackDebug){
+					cerr << "poping" << endl;
+					printCallStack();
+				}
+			}
+
+
+			//add new calls to stack
+			if(/*!previousTempConstructorCallArg && !previousCallArg && !previousMemberCallArg &&*/
+					isParentDeclInCurFile(D,"CXXConstructExpr") && isParentDecl(D, "CXXConstructExpr")){
 
 				if(debugPrint){
 					cerr << "setting previousConstructorCall to true" << endl;
@@ -261,8 +312,9 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 
 				previousConstructorCallArg = true;
 
-			}else if(!previousConstructorCallArg && !previousCallArg &&
-					isParentDecl(D, "CXXTemporaryObjectExpr") && isParentDeclInCurFile(D,"CXXTemporaryObjectExpr")){
+
+			}else if(/*!previousConstructorCallArg && !previousCallArg && !previousMemberCallArg &&*/
+					isParentDeclInCurFile(D,"CXXTemporaryObjectExpr") && isParentDecl(D, "CXXTemporaryObjectExpr")){
 
 				if(debugPrint){
 					cerr << "setting previousTempConstructorCallArg" << endl;
@@ -270,8 +322,7 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 
 				previousTempConstructorCallArg = true;
 
-			}else if(!previousConstructorCallArg && !previousTempConstructorCallArg && (isParentDecl(D, "CallExpr") || 
-						isParentDecl(D, "CXXMemberCallExpr"))){
+			}else if(isParentDecl(D, "CallExpr")){
 
 				if(debugPrint){
 					cerr << "setting previousCallArgs to true" << endl;
@@ -279,26 +330,40 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 
 				previousCallArg = true;
 
-			}else if((previousCallArg || previousConstructorCallArg || previousTempConstructorCallArg) && numClosingArgsNeeded > 0){
-				//if the current node is not a child of a call
-				//but the previous node was a child of a call
-				//then we know to print a </args>
+			}else if(/*!previousConstructorCallArg && !previousTempConstructorCallArg && !previousCallArg && */
+					isParentDecl(D, "CXXMemberCallExpr")){
+
 				if(debugPrint){
-					cerr << "adding args" << endl;
+					cerr << "setting previousMemberCallArg to true" << endl;
 				}
-				numClosingArgsNeeded--;
-				output += "</args,1>\n";
-				previousCallArg = false;
-				previousConstructorCallArg = false;
-				previousTempConstructorCallArg = false;
+
+				previousMemberCallArg = true;
+
+			}
+
+
+			if(isParentDecl(getDeclParent(D, Context), "Var")){
+				previousRhsDecl = true;
+				if(debugPrint){
+					cout << "setting prev var to true" << endl;
+				}
+			}else if(previousRhsDecl && numClosingVarsNeeded > 0){
+				//if the current node is not a child of a variable declaration 
+				//but the previous node was a child of a variable declation 
+				//then we know to print a </decl>
+				output +="</variableDecl,1>\n";
+				numClosingVarsNeeded--;
+				previousRhsDecl = false;
 			}
 
 
 			if(node == "Var"){
 				output += "<variableDecl, " + prevLevel +  ">";
+				numClosingVarsNeeded++;
 				VarDecl* VD = (VarDecl*) D;
 				if(!VD->hasInit()){
 					output +="\n</variableDecl,1>\n";
+					numClosingVarsNeeded--;
 				}
 			}else if(node == "Function"){
 				FunctionDecl* FD = (FunctionDecl*) D; 
@@ -417,8 +482,29 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 
 				//if the parent is calling any type of funciton then this node should be enclosed in <args> </args>
 				string filename;
-				if(!previousTempConstructorCallArg && !previousCallArg &&
-						((isParentStmt(x, "CXXConstructExpr") && isParentStmtInCurFile(x,"CXXConstructExpr")))){
+				if(callStackDebug && !callStack.empty()){
+					cerr << "stmt: call stack top: " << callStack.top()->getStmtClassName() << endl;
+				}
+
+				while(!callStack.empty() && numClosingArgsNeeded > 0
+						&& !isParentStmt(parent, callStack.top()->getStmtClassName())){
+
+					if(debugPrint){
+						cerr << "adding args" << endl;
+					}
+					numClosingArgsNeeded--;
+					output += "</args,1>\n";
+
+					callStack.pop();
+
+					if(callStackDebug){
+						cerr << "popping" << endl;
+						printCallStack();
+					}
+				}
+
+				if(/*!previousTempConstructorCallArg && !previousCallArg && !previousMemberCallArg &&*/
+						isParentStmtInCurFile(x,"CXXConstructExpr") && isParentStmt(x, "CXXConstructExpr")){
 
 					if(debugPrint){
 						cerr << "setting previousConstructorCall to true" << endl;
@@ -426,8 +512,8 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 
 					previousConstructorCallArg = true;
 
-				}else if(!previousConstructorCallArg && !previousCallArg &&
-						isParentStmt(x, "CXXTemporaryObjectExpr") && isParentStmtInCurFile(x,"CXXTemporaryObjectExpr")){
+				}else if(/*!previousConstructorCallArg && !previousCallArg && !previousMemberCallArg &&*/
+						isParentStmtInCurFile(x,"CXXTemporaryObjectExpr") && isParentStmt(x, "CXXTemporaryObjectExpr")){
 
 					if(debugPrint){
 						cerr << "setting previousTempConstructorCallArg" << endl;
@@ -435,8 +521,8 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 
 					previousTempConstructorCallArg = true;
 
-				}else if(!previousConstructorCallArg && !previousTempConstructorCallArg && (isParentStmt(x, "CallExpr") || 
-							isParentStmt(x, "CXXMemberCallExpr"))){
+				}else if(/*!previousConstructorCallArg && !previousTempConstructorCallArg && !previousMemberCallArg &&*/
+						isParentStmt(x, "CallExpr")){
 
 					if(debugPrint){
 						cerr << "setting previousCallArgs to true" << endl;
@@ -444,30 +530,30 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 
 					previousCallArg = true;
 
-				}else if((previousCallArg || previousConstructorCallArg || previousTempConstructorCallArg) && 
-					numClosingArgsNeeded > 0){
-					//if the current node is not a child of a call
-					//but the previous node was a child of a call
-					//then we know to print a </args>
-					if(debugPrint){
-						cerr << "adding args" << endl;
-					}
-					numClosingArgsNeeded--;
-					output += "</args,1>\n";
-					previousCallArg = false;
-					previousConstructorCallArg = false;
-					previousTempConstructorCallArg = false;
-				}
+				}else if(/*!previousConstructorCallArg && !previousTempConstructorCallArg && !previousCallArg &&*/
+						isParentStmt(x, "CXXMemberCallExpr")){
 
+					if(debugPrint){
+						cerr << "setting previousMemberCallArgs to true" << endl;
+					}
+
+					previousMemberCallArg = true;
+
+				}
 
 				//if the parent is a variable declaration then this node should be encolsed in <decl> </decl>
 				if(isParentStmt(x, "Var")){
 					previousRhsDecl = true;
-				}else if(previousRhsDecl){
+					if(debugPrint){
+						cout << "setting prev var to true" << endl;
+					}
+
+				}else if(previousRhsDecl && numClosingVarsNeeded > 0){
 					//if the current node is not a child of a variable declaration 
 					//but the previous node was a child of a variable declation 
 					//then we know to print a </decl>
 					output +="</variableDecl,1>\n";
+					numClosingVarsNeeded--;
 					previousRhsDecl = false;
 				}
 
@@ -514,6 +600,8 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 					output += "<forLoop";
 				}else if(node == "WhileStmt"){
 					output += "<whileLoop";
+				}else if(node == "DoStmt"){
+					output += "<do";		
 				}else if(node == "IfStmt"){
 					output += "<ifStatement";
 				}else if(node == "SwitchStmt"){
@@ -532,6 +620,13 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 					output += ", " + level + ">\n";
 					output += "<args";
 					numClosingArgsNeeded++;
+					callStack.push(x);
+
+					if(callStackDebug){
+						cerr << "pushing" << endl;
+						printCallStack();								
+					}
+
 				}else if(node == "CallExpr"){
 					CallExpr* expr = (CallExpr*) x;
 					output += "<calling func: ";
@@ -539,6 +634,12 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 					output += ", " + level + ">\n";
 					output += "<args";
 					numClosingArgsNeeded++;
+					callStack.push(x);
+					if(callStackDebug){
+						cerr << "pushing" << endl;
+						printCallStack();								
+					}
+
 				}else if(node == "CXXConstructExpr"){
 					CXXConstructExpr* ce = (CXXConstructExpr*) x;
 					Decl* CD = ce->getConstructor();
@@ -551,6 +652,12 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 						output += "," + level + ">\n";
 						output += "<args";
 						numClosingArgsNeeded++;
+						callStack.push(x);
+						if(callStackDebug){
+							cerr << "pushing" << endl;
+							printCallStack();								
+						}
+
 					}
 
 				}else if(node == "BinaryOperator"){
@@ -591,7 +698,7 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 					CXXTemporaryObjectExpr* ce = (CXXTemporaryObjectExpr*) x;
 					Decl* CD = ce->getConstructor();
 
-	
+
 
 					string filename;
 					if(isInCurFile(Context, CD, filename)){
@@ -601,6 +708,13 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 						output += "," + level + ">\n";
 						output += "<args";
 						numClosingArgsNeeded++;
+						callStack.push(x);
+						if(callStackDebug){
+							cerr << "pushing" << endl;
+							printCallStack();								
+						}
+
+
 					}
 
 				}else{
@@ -616,7 +730,10 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 				}
 
 
-				if(output.size() != 0 && output != "</cond,1>\n" && output != "</variableDecl,1>\n" && output != "</args,1>\n"){
+				if(output.size() != 0 && !endsIn(output, "</cond,1>\n") && 
+						!endsIn(output,"</variableDecl,1>\n") && !endsIn(output,"</args,1>\n") 
+						&& !endsIn(output,">") && !endsIn(output, ">\n")){
+					//cerr << "output: " << output << " doesn't end in anything bad" << endl << endl;
 					output += ", " + level + ">";
 					cout << output << endl;
 					output = "";
@@ -644,7 +761,7 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 		 */
 		bool isParentStmtInCurFile(const Stmt* S, const string& nodeToFind){
 			if(debugPrint && nodeToFind == "CXXConstructExpr"){
-				cerr << "checking if parentStmtInCurFile" << endl;
+				//cerr << "checking if parentStmtInCurFile" << endl;
 			}
 
 			if(S == NULL){
@@ -730,10 +847,10 @@ It can be a grandparent, great grand parent etc
 
 			//we found the node we're looking for
 			if(strcmp(D->getDeclKindName(), nodeToFind.c_str()) == 0){
-
 				return true;
 			}
 
+			
 			const Decl* parent = getDeclParent(D, Context);
 			const Stmt* stmtParent = getStmtParent(D, Context);
 			//if there are no more parents of type Decl, 
@@ -746,6 +863,7 @@ It can be a grandparent, great grand parent etc
 			return isParentDecl(parent, nodeToFind);
 
 		}
+
 
 		/*
 		   Function to check is node of type "nodeToFind" is a parent of S
@@ -762,6 +880,7 @@ It can be a grandparent, great grand parent etc
 			if(strcmp(S->getStmtClassName(), nodeToFind.c_str()) == 0){
 				return true;
 			}
+
 
 			const Stmt* parent = getStmtParent(S, Context);
 			const Decl* declParent = getDeclParent(S, Context);
@@ -856,6 +975,9 @@ class ASTMatcherAction : public clang::ASTFrontendAction {
 
 
 int main(int argc, char** argv){
+
+	callStack = stack<const Stmt*>();
+
 	includeList.push_back("input.cc");
 
 	for(int i=1; i<argc; i++){

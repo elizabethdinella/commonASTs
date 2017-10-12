@@ -12,6 +12,7 @@ class Module;
 class Identifier;
 class FunctionDef;
 class For;
+class DoWhile;
 class While;
 class Args;
 class VariableDecl;
@@ -48,6 +49,7 @@ class CounterVisitor{
 		int getFunctionDef() const;
 		int getVariableDecl() const;
 		int getWhile() const;
+		int getDoWhile() const;
 		int getSwitch() const;
 		int getArgs() const;
 		int getCase() const;
@@ -76,6 +78,7 @@ class CounterVisitor{
 		void visit(FunctionDef* f);
 		void visit(VariableDecl* vd);
 		void visit(While* w);
+		void visit(DoWhile* dw);
 		void visit(Switch* s);
 		void visit(Args* a);
 		void visit(Case* c);
@@ -104,6 +107,7 @@ private:
 		int countVariableDecl;
 		int countFor;
 		int countWhile;
+		int countDoWhile;
 		int countIf;
 		int countClassDef;
 		int countImport;
@@ -125,6 +129,8 @@ private:
 		int countSwitch;
 		int countArgs;
 		int complexity;
+		
+		bool findingComplexity;
 	
 		map<string, vector<string> > nodesToCount;
 

@@ -3,6 +3,8 @@
 
 using namespace std;
 
+bool debugComplexity = false;
+
 string getIndentation(int level){
 	string ret = "";
 	for(int i=1; i<=level; i++){
@@ -19,6 +21,7 @@ CounterVisitor::CounterVisitor(){};
 CounterVisitor::CounterVisitor(map<string, vector<string> > nodesToCount){
 
 	this->nodesToCount = nodesToCount;
+	findingComplexity  =  nodesToCount.find("-Complexity") != nodesToCount.end();
 
 	map<string, vector<string> >::iterator itr;
 	for(itr = nodesToCount.begin(); itr != nodesToCount.end(); itr++){
@@ -103,7 +106,7 @@ CounterVisitor::CounterVisitor(map<string, vector<string> > nodesToCount){
 	countCase = 0;
 	countSwitch = 0;	
 	countArgs = 0;
-
+	complexity = 0;
 }
 
 //CounterVisitor::visit for each type of not abstract node
@@ -210,7 +213,7 @@ int CounterVisitor::getComparison() const{
 }
 
 int CounterVisitor::getComplexity() const{
-	return complexity; 
+	return this->complexity; 
 }
 
 string CounterVisitor::getClassesAndBases() const{
@@ -219,6 +222,22 @@ string CounterVisitor::getClassesAndBases() const{
 
 void CounterVisitor::visit(For* f){
 	countFor += 1; 	
+	
+	if(debugComplexity){
+		cout << "current complexity: " << this->complexity << endl;
+		cout << "For loop's complexity: " << f->complexity << endl;
+	}
+
+	//If we are counting complexity
+	if(findingComplexity && nodesToCount["-Complexity"].size() == 0 
+		&& f->complexity > this->complexity){
+
+		if(debugComplexity){
+			cout << "setting current complexity to: " << f->complexity << endl;
+		}
+		
+		this->complexity = f->complexity;
+	}
 }
 
 void CounterVisitor::visit(Module* m){
@@ -230,23 +249,111 @@ void CounterVisitor::visit(Identifier* i){
 }
 
 void CounterVisitor::visit(FunctionDef* f){
-	if(nodesToCount["FunctionDef"].size() > 0){
+
+	bool countingFuncDefs = nodesToCount.find("FunctionDef") != nodesToCount.end();
+
+	//If we are counting function defs  
+	if(countingFuncDefs && nodesToCount["FunctionDef"].size() > 0){
+
 		string arg1 = nodesToCount["FunctionDef"][0];
-		if(f->name->name == arg1 || arg1.length() == 0 ){
-			complexity = f->complexity;
+		if(f->name->name == arg1){
 			countFunctionDef += 1;
 		}
-	}else{
+
+	}else if(countingFuncDefs){
 		countFunctionDef += 1;
+	}
+
+	if(debugComplexity){
+		cout << "function's complexity: " << f->complexity << endl;
+		cout << "current complexity: " << this->complexity << endl;
+	}
+
+	//If we are counting complexity
+	if(findingComplexity && nodesToCount["-Complexity"].size() > 0){
+
+		string arg1 = nodesToCount["-Complexity"][0];
+		if(f->name->name == arg1 && f->complexity > complexity){
+			
+			if(debugComplexity){
+				cout << "setting complexity to funciton's complexity" << endl;
+			}
+
+			complexity = f->complexity;	
+		}
+
+	}else if(findingComplexity && f->complexity > complexity){
+		if(debugComplexity){
+			cout << "setting complexity to funciton's complexity" << endl;
+		}
+
+		complexity = f->complexity;
 	}
 }
 
 void CounterVisitor::visit(VariableDecl* vd){
 	countVariableDecl += 1;
+
+	if(debugComplexity){
+		cout << "current complexity: " << this->complexity << endl;
+		cout << "variable declaration's complexity: " << vd->complexity << endl; 
+	}
+
+	//If we are counting complexity
+	if(findingComplexity && nodesToCount["-Complexity"].size() == 0 
+		&& vd->complexity > complexity){
+
+		if(debugComplexity){
+			cout << "setting complexity to variable declaration's complexity" << endl;
+		}
+
+
+		complexity = vd->complexity;
+	}
+
 }
 
 void CounterVisitor::visit(While* w){
 	countWhile += 1;
+
+	if(debugComplexity){
+		cout << "current complexity: " << this->complexity << endl;
+		cout << "while's complexity: " << w->complexity << endl; 
+	}
+
+
+	//If we are counting complexity
+	if(findingComplexity && nodesToCount["-Complexity"].size() == 0 
+		&& w->complexity > complexity){
+
+		if(debugComplexity){
+			cout << "setting complexity to while's complexity" << endl;
+		}
+
+
+		complexity = w->complexity;
+	}
+}
+
+void CounterVisitor::visit(DoWhile* dw){
+	countDoWhile += 1;
+
+	if(debugComplexity){
+		cout << "current complexity: " << this->complexity << endl;
+		cout << "do while's complexity: " << dw->complexity << endl; 
+	}
+
+	//If we are counting complexity
+	if(findingComplexity && nodesToCount["-Complexity"].size() == 0 
+		&& dw->complexity > complexity){
+
+		if(debugComplexity){
+			cout << "setting complexity to while's complexity" << endl;
+		}
+
+
+		complexity = dw->complexity;
+	}
 }
 
 void CounterVisitor::visit(Switch* s){
