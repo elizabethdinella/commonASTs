@@ -41,7 +41,7 @@ void Call::accept(CounterVisitor &v){
 
 class Parser{
 	public:
-
+	
 		Parser(const string& filename) : file(filename.c_str()) {};
 
 		Parser(const string& filename, map<string, vector<string > > nodesToCount): file(filename.c_str()) {
@@ -261,6 +261,7 @@ class Parser{
 					break;
 				}else{
 					cerr << "ERROR: Attempted to add value which is not an EXPR or STMT" << endl;
+					exit(1);
 				}
 
 				lt = getLookaheadToken();
@@ -288,6 +289,7 @@ class Parser{
 					break;
 				}else{
 					cerr << "ERROR: Attempted to add value which is not an EXPR or STMT" << endl;	
+					exit(1);
 				}
 			}	
 			return cs;
@@ -319,6 +321,7 @@ class Parser{
 					return args;
 				}else{
 					cerr << "ERROR: Attempted to add value which is not an EXPR" << endl;	
+					exit(1);
 				}
 			}
 
@@ -387,6 +390,7 @@ class Parser{
 					return f;
 				}else{
 					cerr << "ERROR: Attempted to add value which is not an EXPR or STMT" << endl;	
+					exit(1);
 				}
 
 			}
@@ -498,10 +502,13 @@ class Parser{
 
 		Import* parseImport(int level){
 			Import* i = new Import();
-			while(getLookaheadToken()->level > level /*&& getLookaheadToken()->value != "END"*/){
+
+                       	while(getLookaheadToken()->level > level && getLookaheadToken()->value != "/importing"){
 				i->names.push_back(parseIdentifier());
 			}
 
+			//throwaway </importing> token
+                        getToken();
 			return i;
 		}
 
@@ -599,6 +606,10 @@ class Parser{
 			return visitor.getFor();
 		}
 
+		int getWhile() const{
+			return visitor.getWhile();
+		}
+
 		int getComplexity() const{
 			return visitor.getComplexity();
 		}
@@ -662,10 +673,32 @@ bool isStmt(string val){
 	return val == "functionDef" || val == "classDef" || val == "compoundStmt" || val == "return" || val == "assignment" || val == "augAssign" || val == "forLoop" || val == "whileLoop" || val == "do" || val == "ifStatement" || val == "importing" || val == "exec" || val == "variableDecl" || val == "try" || val == "except" || val == "raisingException" || val == "switch" || val == "case" || val.compare(0, compVal.length(), compVal) == 0;
 }
 
+void printASTasJSON(ASTNode* node, int level=0){
+	list<ASTNode*> children = node->getChildren();
+	
+	cout << getIndentation(level);
+	cout << "{" << endl;
+	cout << getIndentation(level+1);
+	cout << "\"children\":[" << endl;
+
+	list<ASTNode*>::iterator itr;
+	for(itr=children.begin(); itr!= children.end(); itr++){
+		printASTasJSON(*itr, level+2);
+
+	}
+
+	cout << getIndentation(level+1);
+	cout << "]" << endl;
+
+	node->printNodeAsJSON(level);
+	cout << getIndentation(level);
+	cout << "}" << endl;
+}
 
 void printAST(ASTNode* node, int level=0){
 
 	list<ASTNode*> children = node->getChildren();
+	
 	node->printNode(level);
 
 	list<ASTNode*>::iterator itr;
@@ -723,17 +756,20 @@ int main(int argc, char** argv){
 
 	map<string, vector<string> >::iterator itr;
 	for(itr= nodesToCount.begin(); itr != nodesToCount.end(); itr++){
-
 		if(itr->first == "-For"){
-			cout << "number of for loops: " << parser.getFor() << endl;
+			cout << parser.getFor() << endl;
+		}else if(itr->first == "-While"){
+			cout << parser.getWhile() << endl;
 		}else if(itr->first == "-ForbidCall"){
-			cout << "number of forbidden calls " << parser.getForbiddenFuncCall() << endl;
+			cout << parser.getForbiddenFuncCall() << endl;
 		}else if(itr->first == "-Complexity"){
-			cout << "complexity n^" << parser.getComplexity() << endl;
+			cout << parser.getComplexity() << endl;
 		}else if(itr->first == "-ClassBases"){
 			cout << parser.getClassesAndBases() << endl;
-		}
 
+		}
 	}
+
+	printASTasJSON(m);
 }
 

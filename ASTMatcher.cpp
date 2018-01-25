@@ -38,10 +38,6 @@ stack<const Stmt*> callStack;
 
 bool prevCondition = false;
 bool previousRhsDecl = false;
-bool previousCallArg = false;
-bool previousMemberCallArg = false;
-bool previousConstructorCallArg = false;
-bool previousTempConstructorCallArg = false;
 
 int numClosingArgsNeeded = 0;
 int numClosingVarsNeeded = 0;
@@ -101,6 +97,7 @@ bool isFunctionDef(const Decl* D){
 	CXXDestructorDecl* CD = (CXXDestructorDecl*) D;
 	return ((node == "CXXConstructor" || node == "CXXDestructor" || node == "CXXMethod") && !CD->isImplicit());
 }
+
 
 bool endsIn(const string& word, const string& ending){
 	if(word.length() < ending.length()){
@@ -303,24 +300,19 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 
 
 			//add new calls to stack
-			if(/*!previousTempConstructorCallArg && !previousCallArg && !previousMemberCallArg &&*/
-					isParentDeclInCurFile(D,"CXXConstructExpr") && isParentDecl(D, "CXXConstructExpr")){
+			if(isParentDeclInCurFile(D,"CXXConstructExpr") && isParentDecl(D, "CXXConstructExpr")){
 
 				if(debugPrint){
 					cerr << "setting previousConstructorCall to true" << endl;
 				}
 
-				previousConstructorCallArg = true;
 
-
-			}else if(/*!previousConstructorCallArg && !previousCallArg && !previousMemberCallArg &&*/
-					isParentDeclInCurFile(D,"CXXTemporaryObjectExpr") && isParentDecl(D, "CXXTemporaryObjectExpr")){
+			}else if(isParentDeclInCurFile(D,"CXXTemporaryObjectExpr") && isParentDecl(D, "CXXTemporaryObjectExpr")){
 
 				if(debugPrint){
 					cerr << "setting previousTempConstructorCallArg" << endl;
 				}
 
-				previousTempConstructorCallArg = true;
 
 			}else if(isParentDecl(D, "CallExpr")){
 
@@ -328,16 +320,12 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 					cerr << "setting previousCallArgs to true" << endl;
 				}
 
-				previousCallArg = true;
 
-			}else if(/*!previousConstructorCallArg && !previousTempConstructorCallArg && !previousCallArg && */
-					isParentDecl(D, "CXXMemberCallExpr")){
+			}else if(isParentDecl(D, "CXXMemberCallExpr")){
 
 				if(debugPrint){
 					cerr << "setting previousMemberCallArg to true" << endl;
 				}
-
-				previousMemberCallArg = true;
 
 			}
 
@@ -503,41 +491,31 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 					}
 				}
 
-				if(/*!previousTempConstructorCallArg && !previousCallArg && !previousMemberCallArg &&*/
-						isParentStmtInCurFile(x,"CXXConstructExpr") && isParentStmt(x, "CXXConstructExpr")){
+				if(isParentStmtInCurFile(x,"CXXConstructExpr") && isParentStmt(x, "CXXConstructExpr")){
 
 					if(debugPrint){
 						cerr << "setting previousConstructorCall to true" << endl;
 					}
 
-					previousConstructorCallArg = true;
-
-				}else if(/*!previousConstructorCallArg && !previousCallArg && !previousMemberCallArg &&*/
-						isParentStmtInCurFile(x,"CXXTemporaryObjectExpr") && isParentStmt(x, "CXXTemporaryObjectExpr")){
+				}else if(isParentStmtInCurFile(x,"CXXTemporaryObjectExpr") && isParentStmt(x, "CXXTemporaryObjectExpr")){
 
 					if(debugPrint){
 						cerr << "setting previousTempConstructorCallArg" << endl;
 					}
 
-					previousTempConstructorCallArg = true;
 
-				}else if(/*!previousConstructorCallArg && !previousTempConstructorCallArg && !previousMemberCallArg &&*/
-						isParentStmt(x, "CallExpr")){
+				}else if(isParentStmt(x, "CallExpr")){
 
 					if(debugPrint){
 						cerr << "setting previousCallArgs to true" << endl;
 					}
 
-					previousCallArg = true;
 
-				}else if(/*!previousConstructorCallArg && !previousTempConstructorCallArg && !previousCallArg &&*/
-						isParentStmt(x, "CXXMemberCallExpr")){
+				}else if(isParentStmt(x, "CXXMemberCallExpr")){
 
 					if(debugPrint){
 						cerr << "setting previousMemberCallArgs to true" << endl;
 					}
-
-					previousMemberCallArg = true;
 
 				}
 
@@ -733,7 +711,7 @@ class ASTMatcherVisitor : public RecursiveASTVisitor<ASTMatcherVisitor> {
 				if(output.size() != 0 && !endsIn(output, "</cond,1>\n") && 
 						!endsIn(output,"</variableDecl,1>\n") && !endsIn(output,"</args,1>\n") 
 						&& !endsIn(output,">") && !endsIn(output, ">\n")){
-					//cerr << "output: " << output << " doesn't end in anything bad" << endl << endl;
+
 					output += ", " + level + ">";
 					cout << output << endl;
 					output = "";
