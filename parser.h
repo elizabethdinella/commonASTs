@@ -38,7 +38,7 @@ class ASTNode{
 
 		virtual void printNodeAsJSON(int level){
 			cout << getIndentation(level);
-			cout << "\"type\": \"node\"" << endl;
+			cout << "\"type\": \"node\"," << endl;
 			cout << getIndentation(level);
 			cout << "\"tags\":[" << endl;
 			cout << getIndentation(level+1);

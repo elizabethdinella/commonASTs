@@ -673,26 +673,37 @@ bool isStmt(string val){
 	return val == "functionDef" || val == "classDef" || val == "compoundStmt" || val == "return" || val == "assignment" || val == "augAssign" || val == "forLoop" || val == "whileLoop" || val == "do" || val == "ifStatement" || val == "importing" || val == "exec" || val == "variableDecl" || val == "try" || val == "except" || val == "raisingException" || val == "switch" || val == "case" || val.compare(0, compVal.length(), compVal) == 0;
 }
 
-void printASTasJSON(ASTNode* node, int level=0){
+void printASTasJSON(ASTNode* node, int level=0, bool addComma=false){
+
 	list<ASTNode*> children = node->getChildren();
-	
+
 	cout << getIndentation(level);
 	cout << "{" << endl;
 	cout << getIndentation(level+1);
-	cout << "\"children\":[" << endl;
+	cout << "\"children\": ["; 
 
 	list<ASTNode*>::iterator itr;
-	for(itr=children.begin(); itr!= children.end(); itr++){
-		printASTasJSON(*itr, level+2);
-
+	list<ASTNode*>::iterator temp;
+	for(itr=children.begin(), temp=itr; itr!= children.end(); itr++){
+		cout << endl;
+		bool comma = (++temp) != children.end();
+		printASTasJSON(*itr, level+2, comma);
 	}
 
-	cout << getIndentation(level+1);
-	cout << "]" << endl;
+	if(children.size() > 0){
+		cout << getIndentation(level+1);
+	}
+	cout << "]," << endl;
 
-	node->printNodeAsJSON(level);
+	node->printNodeAsJSON(level+1);
 	cout << getIndentation(level);
-	cout << "}" << endl;
+
+	cout << "}";
+	if(addComma){
+		cout << ",";
+	}else{
+		cout << endl;
+	}
 }
 
 void printAST(ASTNode* node, int level=0){
