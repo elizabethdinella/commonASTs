@@ -9,15 +9,6 @@ bool isExpr(string);
 bool isStmt(string);
 bool printDebug = false;
 
-string Call::getType(){
-	return "Call";	
-}
-
-list<ASTNode*> Call::getChildren(){
-	list<ASTNode*> children;
-	return children;
-}
-
 void Call::printNode(int level){
 	cout << getIndentation(level);
 	cout << "-----------------" << endl;
@@ -301,6 +292,7 @@ class Parser{
 			}
 
 			Args* args = new Args();
+			args->argList = list<Expr*>(); 
 			Token* argsToken = getToken();		
 
 			if(printDebug){
@@ -311,7 +303,6 @@ class Parser{
 			while(getLookaheadToken()->value != "/args"){
 
 				if(printDebug){
-
 					cerr << "parsing arg: " << getLookaheadToken()->value <<endl;
 				}
 
@@ -598,16 +589,16 @@ class Parser{
 
 		}
 
-		int getForbiddenFuncCall() const{
-			return visitor.getForbiddenFuncCall();
-		}
-
 		int getFor() const{
 			return visitor.getFor();
 		}
 
 		int getWhile() const{
 			return visitor.getWhile();
+		}
+
+		int getCall() const{
+			return visitor.getCall();
 		}
 
 		int getComplexity() const{
@@ -727,6 +718,8 @@ int main(int argc, char** argv){
 		exit(1);
 	}
 
+	bool jsonOutput = false;
+	
 	string inputFile = argv[1];
 
 	map<string, vector<string> > nodesToCount;
@@ -737,10 +730,18 @@ int main(int argc, char** argv){
 
 		string itemToCount = *argv;
 		argv++;
+		if(!(*argv)){
+			jsonOutput = (itemToCount == "json");
+			break;
+		}
 		string argsString = *argv;
 
 		vector<string> args;	
 		//ADD SOME ERROR HANDLING. MAKE SURE THE USER HAS SOME ARGUMENTS SUCH AS VOID
+
+		if(argsString.find(",") == string::npos){
+			args.push_back(argsString);
+		}
 
 
 		while(argsString.find(",") != string::npos){
@@ -771,16 +772,17 @@ int main(int argc, char** argv){
 			cout << parser.getFor() << endl;
 		}else if(itr->first == "-While"){
 			cout << parser.getWhile() << endl;
-		}else if(itr->first == "-ForbidCall"){
-			cout << parser.getForbiddenFuncCall() << endl;
+		}else if(itr->first == "-Call"){
+			cout << parser.getCall() << endl;
 		}else if(itr->first == "-Complexity"){
 			cout << parser.getComplexity() << endl;
 		}else if(itr->first == "-ClassBases"){
 			cout << parser.getClassesAndBases() << endl;
-
 		}
 	}
 
-	printASTasJSON(m);
+	if(jsonOutput){
+		printASTasJSON(m);
+	}
 }
 
